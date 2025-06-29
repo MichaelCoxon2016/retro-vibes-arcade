@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import styled from 'styled-components'
 import { createClient } from '@/lib/supabase/client'
@@ -72,7 +71,6 @@ export default function ResetPasswordPage() {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
-  const router = useRouter()
   const supabase = createClient()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -90,7 +88,7 @@ export default function ResetPasswordPage() {
         setEmailSent(true)
         toast.success('Password reset link sent to your email!')
       }
-    } catch (error) {
+    } catch {
       toast.error('An error occurred. Please try again.')
     } finally {
       setLoading(false)
@@ -103,7 +101,7 @@ export default function ResetPasswordPage() {
         <Card>
           <Title>CHECK YOUR EMAIL</Title>
           <Message>
-            We've sent a password reset link to {email}.
+            We&apos;ve sent a password reset link to {email}.
             Please check your inbox and follow the instructions.
           </Message>
           <Footer>

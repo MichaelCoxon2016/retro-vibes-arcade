@@ -62,11 +62,15 @@ Run the contents of `/supabase/game-rooms-schema-fixed.sql`
 ## Step 6: Configure Authentication URLs
 
 1. Go to Authentication → URL Configuration
-2. Add to "Redirect URLs":
+2. Set the **Site URL** to:
+   - `https://retro-vibes-arcade.vercel.app`
+3. Add to **Redirect URLs**:
    - `http://localhost:3000/*`
    - `http://localhost:3001/*`
    - `http://localhost:3002/*`
    - `https://retro-vibes-arcade.vercel.app/*`
+
+**Note**: The Site URL is used as the default redirect for authentication emails (password reset, magic links, etc.)
 
 ## Step 7: Enable Realtime (Optional)
 

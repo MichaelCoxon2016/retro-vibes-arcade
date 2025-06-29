@@ -103,7 +103,7 @@ export default function UpdatePasswordPage() {
         toast.success('Password updated successfully!')
         router.push('/auth/login')
       }
-    } catch (error) {
+    } catch {
       toast.error('An error occurred. Please try again.')
     } finally {
       setLoading(false)
