@@ -141,7 +141,7 @@ export class GameRoomService {
     }
   }
 
-  private async joinRoomChannel(roomId: string) {
+  async joinRoomChannel(roomId: string) {
     this.roomId = roomId
     
     // Leave existing channel if any

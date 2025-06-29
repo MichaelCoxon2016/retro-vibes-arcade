@@ -227,6 +227,9 @@ export default function SnakePage() {
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null)
   const [isGameOver, setIsGameOver] = useState(false)
   const [roomService] = useState(() => new GameRoomService())
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_currentRoomId, setCurrentRoomId] = useState<string | null>(null) // Will be used for real-time sync
+  const [waitingForPlayer, setWaitingForPlayer] = useState(false)
 
   // Initialize engine when canvas is available
   const initializeEngine = useCallback(() => {
@@ -493,7 +496,18 @@ export default function SnakePage() {
     try {
       const result = await roomService.createRoom('snake', {})
       console.log('Room created:', result)
-      // TODO: Implement waiting room and real-time game
+      setCurrentRoomId(result.roomId)
+      
+      // Set up room update listener for host
+      roomService.onRoomUpdated((room) => {
+        console.log('Room updated:', room)
+        if (room.guest_id && waitingForPlayer) {
+          // Guest has joined!
+          toast.success('Player 2 has joined!')
+          setWaitingForPlayer(false)
+        }
+      })
+      
       toast.success(`Room created! Code: ${result.roomCode}`)
       return result
     } catch (error) {
@@ -506,11 +520,14 @@ export default function SnakePage() {
     try {
       const roomId = await roomService.joinRoom(roomCode)
       console.log('Joined room:', roomId)
+      setCurrentRoomId(roomId)
       
       // Set up listeners for when host starts the game
       roomService.onRoomUpdated((room) => {
-        if (room.status === 'playing') {
+        console.log('Guest received room update:', room)
+        if (room.status === 'playing' && showPvPMenu) {
           // Host has started the game, guest should start too
+          console.log('Host started game, guest joining...')
           handleStartMultiplayer(room.id, room.room_code, false)
         }
       })
@@ -525,11 +542,22 @@ export default function SnakePage() {
   const handleCheckRoomReady = async (roomId: string): Promise<boolean> => {
     try {
       const room = await roomService.getRoom(roomId)
-      if (!room) return false
+      console.log('Checking room ready:', room)
+      
+      if (!room) {
+        console.error('Room not found')
+        return false
+      }
       
       // Check if both host and guest are present
       const hasHost = !!room.host_id
       const hasGuest = !!room.guest_id
+      
+      console.log('Room status:', { hasHost, hasGuest, hostId: room.host_id, guestId: room.guest_id })
+      
+      if (!hasGuest) {
+        setWaitingForPlayer(true)
+      }
       
       return hasHost && hasGuest
     } catch (error) {
