@@ -117,21 +117,26 @@ interface PvPMenuProps {
   onStartAI: (difficulty: AIDifficulty) => void
   onCreateRoom: () => Promise<{ roomId: string; roomCode: string }>
   onJoinRoom: (roomCode: string) => Promise<boolean>
+  onStartMultiplayer: (roomId: string, roomCode: string, isHost: boolean) => void
   onBack: () => void
 }
 
-export default function PvPMenu({ onStartAI, onCreateRoom, onJoinRoom, onBack }: PvPMenuProps) {
+export default function PvPMenu({ onStartAI, onCreateRoom, onJoinRoom, onStartMultiplayer, onBack }: PvPMenuProps) {
   const [menuState, setMenuState] = useState<PvPMenuState>('main')
   const [selectedDifficulty, setSelectedDifficulty] = useState<AIDifficulty>('medium')
   const [roomCode, setRoomCode] = useState('')
+  const [roomId, setRoomId] = useState('')
   const [joinCode, setJoinCode] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isHost, setIsHost] = useState(false)
 
   const handleCreateRoom = async () => {
     setIsLoading(true)
     try {
       const result = await onCreateRoom()
       setRoomCode(result.roomCode)
+      setRoomId(result.roomId)
+      setIsHost(true)
       setMenuState('waiting')
     } catch (error) {
       toast.error('Failed to create room')
@@ -149,9 +154,12 @@ export default function PvPMenu({ onStartAI, onCreateRoom, onJoinRoom, onBack }:
 
     setIsLoading(true)
     try {
-      const success = await onJoinRoom(joinCode.toUpperCase())
-      if (success) {
-        setMenuState('waiting')
+      const result = await onJoinRoom(joinCode.toUpperCase())
+      if (result) {
+        setRoomCode(joinCode.toUpperCase())
+        setIsHost(false)
+        // For joined players, start game immediately
+        onStartMultiplayer('', joinCode.toUpperCase(), false)
       } else {
         toast.error('Failed to join room')
       }
@@ -359,14 +367,29 @@ export default function PvPMenu({ onStartAI, onCreateRoom, onJoinRoom, onBack }:
           )}
           
           <WaitingText>
-            Waiting for opponent to join...
+            {isHost ? 'Share this code with your friend' : 'Waiting for host to start...'}
           </WaitingText>
+          
+          {isHost && (
+            <>
+              <MenuButton
+                onClick={() => onStartMultiplayer(roomId, roomCode, true)}
+                variant="primary"
+                fullWidth
+              >
+                Start Game
+              </MenuButton>
+              <div style={{ marginBottom: '1rem' }} />
+            </>
+          )}
           
           <BackButton 
             onClick={() => {
               setMenuState('main')
               setRoomCode('')
+              setRoomId('')
               setJoinCode('')
+              setIsHost(false)
             }} 
             variant="danger" 
             fullWidth

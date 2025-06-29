@@ -514,6 +514,73 @@ export default function SnakePage() {
     }
   }
 
+  const handleStartMultiplayer = async (roomId: string, roomCode: string, isHost: boolean) => {
+    console.log('Starting multiplayer game:', { roomId, roomCode, isHost })
+    
+    // Hide menus and prepare for game
+    setShowPvPMenu(false)
+    setShowMenu(false)
+    setGameMode('pvp')
+    setScore(0)
+    setTimeRemaining(120) // 2 minute matches
+    
+    // Wait for canvas to be ready
+    await new Promise(resolve => requestAnimationFrame(resolve))
+    
+    // Initialize engine if needed
+    let attempts = 0
+    while (!engineRef.current && attempts < 10) {
+      console.log(`Multiplayer initialization attempt ${attempts + 1}`)
+      const success = initializeEngine()
+      if (!success) {
+        await new Promise(resolve => setTimeout(resolve, 50))
+      }
+      attempts++
+    }
+    
+    if (!engineRef.current) {
+      console.error('Failed to initialize engine for multiplayer')
+      setShowMenu(true)
+      toast.error('Failed to start game. Please refresh and try again.')
+      return
+    }
+
+    const playerId = user?.id || 'guest'
+    const playerName = user?.user_metadata?.username || 'Player'
+    
+    try {
+      // For now, we'll use the same PvP logic but with placeholder for real multiplayer
+      // TODO: Implement real-time multiplayer synchronization
+      if (isHost) {
+        // Host waits for guest to join before starting
+        engineRef.current.initPvPGame([
+          { id: playerId, name: `${playerName} (Host)` },
+          { id: 'waiting', name: 'Waiting for player...' }
+        ])
+        toast(`Room ${roomCode} created! Waiting for player to join...`, { icon: 'ℹ️' })
+      } else {
+        // Guest joins existing game
+        engineRef.current.initPvPGame([
+          { id: 'host', name: 'Host Player' },
+          { id: playerId, name: playerName }
+        ])
+      }
+      
+      lastTimeRef.current = performance.now()
+      animationFrameRef.current = requestAnimationFrame(gameLoop)
+      setIsGameOver(false)
+      
+      // TODO: Set up real-time listeners for game state synchronization
+      // roomService.onStateUpdated((state) => { ... })
+      // roomService.onEventOccurred((event) => { ... })
+      
+    } catch (error) {
+      console.error('Failed to start multiplayer game:', error)
+      setShowMenu(true)
+      toast.error('Failed to start game')
+    }
+  }
+
   const startPvPGame = async () => {
     console.log('Starting PvP game...')
     
@@ -580,6 +647,7 @@ export default function SnakePage() {
             onStartAI={startPvPWithAI}
             onCreateRoom={handleCreateRoom}
             onJoinRoom={handleJoinRoom}
+            onStartMultiplayer={handleStartMultiplayer}
             onBack={() => setShowPvPMenu(false)}
           />
         ) : showMenu ? (
