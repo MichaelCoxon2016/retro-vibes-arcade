@@ -281,8 +281,10 @@ export default function SnakePage() {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current)
       }
+      // Clean up room service listeners
+      roomService.leaveRoom()
     }
-  }, [])
+  }, [roomService])
 
   // Keyboard controls
   useEffect(() => {
@@ -504,18 +506,49 @@ export default function SnakePage() {
     try {
       const roomId = await roomService.joinRoom(roomCode)
       console.log('Joined room:', roomId)
-      // TODO: Implement waiting room and real-time game
-      toast.success('Joined room successfully!')
-      return true
+      
+      // Set up listeners for when host starts the game
+      roomService.onRoomUpdated((room) => {
+        if (room.status === 'playing') {
+          // Host has started the game, guest should start too
+          handleStartMultiplayer(room.id, room.room_code, false)
+        }
+      })
+      
+      return { success: true, roomId }
     } catch (error) {
       console.error('Failed to join room:', error)
-      toast.error('Failed to join room')
+      return { success: false }
+    }
+  }
+
+  const handleCheckRoomReady = async (roomId: string): Promise<boolean> => {
+    try {
+      const room = await roomService.getRoom(roomId)
+      if (!room) return false
+      
+      // Check if both host and guest are present
+      const hasHost = !!room.host_id
+      const hasGuest = !!room.guest_id
+      
+      return hasHost && hasGuest
+    } catch (error) {
+      console.error('Failed to check room status:', error)
       return false
     }
   }
 
   const handleStartMultiplayer = async (roomId: string, roomCode: string, isHost: boolean) => {
     console.log('Starting multiplayer game:', { roomId, roomCode, isHost })
+    
+    // If host, update room status to 'playing'
+    if (isHost && roomId) {
+      try {
+        await roomService.updateRoomStatus(roomId, 'playing')
+      } catch (error) {
+        console.error('Failed to update room status:', error)
+      }
+    }
     
     // Hide menus and prepare for game
     setShowPvPMenu(false)
@@ -550,20 +583,21 @@ export default function SnakePage() {
     
     try {
       // For now, we'll use the same PvP logic but with placeholder for real multiplayer
-      // TODO: Implement real-time multiplayer synchronization
+      // Initialize game for both players
       if (isHost) {
-        // Host waits for guest to join before starting
+        // Host is player 1
         engineRef.current.initPvPGame([
-          { id: playerId, name: `${playerName} (Host)` },
-          { id: 'waiting', name: 'Waiting for player...' }
+          { id: playerId, name: `${playerName} (P1)` },
+          { id: 'guest', name: 'Player 2' }
         ])
-        toast(`Room ${roomCode} created! Waiting for player to join...`, { icon: 'ℹ️' })
+        toast.success('Game started!')
       } else {
-        // Guest joins existing game
+        // Guest is player 2
         engineRef.current.initPvPGame([
-          { id: 'host', name: 'Host Player' },
-          { id: playerId, name: playerName }
+          { id: 'host', name: 'Player 1' },
+          { id: playerId, name: `${playerName} (P2)` }
         ])
+        toast.success('Game started!')
       }
       
       lastTimeRef.current = performance.now()
@@ -648,6 +682,7 @@ export default function SnakePage() {
             onCreateRoom={handleCreateRoom}
             onJoinRoom={handleJoinRoom}
             onStartMultiplayer={handleStartMultiplayer}
+            onCheckRoomReady={handleCheckRoomReady}
             onBack={() => setShowPvPMenu(false)}
           />
         ) : showMenu ? (

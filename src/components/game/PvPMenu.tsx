@@ -110,18 +110,19 @@ const DifficultyButton = styled(Button)<{ $selected?: boolean }>`
   `}
 `
 
-export type PvPMenuState = 'main' | 'ai' | 'create' | 'join' | 'waiting'
+export type PvPMenuState = 'main' | 'ai' | 'create' | 'join' | 'waiting' | 'waiting-as-guest'
 export type AIDifficulty = 'easy' | 'medium' | 'hard' | 'insane'
 
 interface PvPMenuProps {
   onStartAI: (difficulty: AIDifficulty) => void
   onCreateRoom: () => Promise<{ roomId: string; roomCode: string }>
-  onJoinRoom: (roomCode: string) => Promise<boolean>
+  onJoinRoom: (roomCode: string) => Promise<{ success: boolean; roomId?: string }>
   onStartMultiplayer: (roomId: string, roomCode: string, isHost: boolean) => void
+  onCheckRoomReady?: (roomId: string) => Promise<boolean>
   onBack: () => void
 }
 
-export default function PvPMenu({ onStartAI, onCreateRoom, onJoinRoom, onStartMultiplayer, onBack }: PvPMenuProps) {
+export default function PvPMenu({ onStartAI, onCreateRoom, onJoinRoom, onStartMultiplayer, onCheckRoomReady, onBack }: PvPMenuProps) {
   const [menuState, setMenuState] = useState<PvPMenuState>('main')
   const [selectedDifficulty, setSelectedDifficulty] = useState<AIDifficulty>('medium')
   const [roomCode, setRoomCode] = useState('')
@@ -155,11 +156,12 @@ export default function PvPMenu({ onStartAI, onCreateRoom, onJoinRoom, onStartMu
     setIsLoading(true)
     try {
       const result = await onJoinRoom(joinCode.toUpperCase())
-      if (result) {
+      if (result.success && result.roomId) {
         setRoomCode(joinCode.toUpperCase())
+        setRoomId(result.roomId)
         setIsHost(false)
-        // For joined players, start game immediately
-        onStartMultiplayer('', joinCode.toUpperCase(), false)
+        setMenuState('waiting-as-guest')
+        toast.success('Joined room! Waiting for host to start...')
       } else {
         toast.error('Failed to join room')
       }
@@ -349,7 +351,7 @@ export default function PvPMenu({ onStartAI, onCreateRoom, onJoinRoom, onStartMu
         </MenuContainer>
       )}
 
-      {menuState === 'waiting' && (
+      {(menuState === 'waiting' || menuState === 'waiting-as-guest') && (
         <MenuContainer
           key="waiting"
           initial={{ opacity: 0, y: 20 }}
@@ -370,10 +372,23 @@ export default function PvPMenu({ onStartAI, onCreateRoom, onJoinRoom, onStartMu
             {isHost ? 'Share this code with your friend' : 'Waiting for host to start...'}
           </WaitingText>
           
-          {isHost && (
+          {isHost ? (
             <>
               <MenuButton
-                onClick={() => onStartMultiplayer(roomId, roomCode, true)}
+                onClick={async () => {
+                  // Check if room has 2 players before starting
+                  if (onCheckRoomReady) {
+                    const isReady = await onCheckRoomReady(roomId)
+                    if (isReady) {
+                      onStartMultiplayer(roomId, roomCode, true)
+                    } else {
+                      toast.error('Waiting for another player to join')
+                    }
+                  } else {
+                    // Fallback if check not implemented
+                    onStartMultiplayer(roomId, roomCode, true)
+                  }
+                }}
                 variant="primary"
                 fullWidth
               >
@@ -381,6 +396,10 @@ export default function PvPMenu({ onStartAI, onCreateRoom, onJoinRoom, onStartMu
               </MenuButton>
               <div style={{ marginBottom: '1rem' }} />
             </>
+          ) : (
+            <WaitingText style={{ marginBottom: '1rem' }}>
+              Waiting for host to start the game...
+            </WaitingText>
           )}
           
           <BackButton 
