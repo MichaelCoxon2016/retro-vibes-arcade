@@ -1,36 +1,170 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🎮 Retro Vibes Arcade
 
-## Getting Started
+A retro-style arcade platform featuring classic games with modern multiplayer capabilities. Built with Next.js, TypeScript, and Supabase.
 
-First, run the development server:
+🎯 **Live Demo**: [https://retro-vibes-arcade.vercel.app/](https://retro-vibes-arcade.vercel.app/)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## ✨ Features
+
+### 🐍 Snake Game
+- **Solo Mode**: Classic snake gameplay with increasing speed and difficulty
+- **PvP Mode**: Play against AI opponents with 4 difficulty levels
+  - Easy: Slower reactions, makes mistakes
+  - Medium: Balanced gameplay
+  - Hard: Quick reactions, smart pathfinding
+  - Insane: Perfect play with prediction
+- **Multiplayer**: Create/join rooms with 6-character codes (coming soon)
+- **Power-ups**: Speed boost, ghost mode, shields, and more
+- **Tournament Mode**: Admin-only competitive play for up to 6 players
+
+### 🎨 Retro Aesthetic
+- Neon color scheme with glowing effects
+- Pixel-perfect rendering
+- Authentic arcade sounds and feel
+- Responsive design for all devices
+
+### 🔐 Authentication & Security
+- User accounts with Supabase Auth
+- High score tracking
+- Row Level Security (RLS) policies
+- Secure multiplayer rooms
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js 18+ 
+- npm or yarn
+- Supabase account (free tier works)
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/MichaelCoxon2016/retro-vibes-arcade.git
+   cd retro-vibes-arcade
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Set up Supabase**
+   - Create a new project at [https://supabase.com](https://supabase.com)
+   - Follow the setup guide in `SUPABASE_SETUP.md`
+
+4. **Configure environment variables**
+   ```bash
+   cp .env.local.example .env.local
+   ```
+   Then update `.env.local` with your Supabase credentials:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+   ```
+
+5. **Run the development server**
+   ```bash
+   npm run dev
+   ```
+
+6. **Open [http://localhost:3000](http://localhost:3000)**
+
+## 🗄️ Database Setup
+
+Run the SQL scripts in your Supabase SQL editor in this order:
+
+1. `/supabase/snake-tournament-schema.sql` - Core game tables
+2. `/supabase/game-rooms-schema-fixed.sql` - Multiplayer room system
+
+## 🌐 Deployment
+
+### Deploy to Vercel
+
+1. Push your code to GitHub
+2. Import your repository on [Vercel](https://vercel.com)
+3. Add environment variables:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+4. Deploy!
+
+### Configure Supabase for Production
+
+In your Supabase project settings:
+1. Go to Authentication → URL Configuration
+2. Add your production URL to redirect URLs:
+   ```
+   https://retro-vibes-arcade.vercel.app/*
+   ```
+
+## 🎮 How to Play
+
+### Snake Controls
+- **Arrow Keys** or **WASD**: Move snake
+- **Space** or **P**: Pause game
+- **Mobile**: Use on-screen arrow buttons
+
+### Game Modes
+1. **Solo Mode**: Score as many points as possible
+2. **PvP vs AI**: Battle against computer opponents
+3. **Multiplayer** (Coming Soon): Real-time battles with friends
+
+## 🛠️ Tech Stack
+
+- **Frontend**: Next.js 15, TypeScript, React
+- **Styling**: Styled Components, CSS Variables
+- **State Management**: Zustand
+- **Backend**: Supabase (Auth, Database, Realtime)
+- **Game Engine**: Custom Canvas-based engine
+- **Deployment**: Vercel
+
+## 📁 Project Structure
+
+```
+src/
+├── app/              # Next.js app router pages
+├── components/       # React components
+├── hooks/           # Custom React hooks
+├── lib/             # Utilities and services
+│   ├── game-engines/  # Game logic
+│   ├── realtime/      # Multiplayer services
+│   └── supabase/      # Database client
+├── store/           # Zustand stores
+├── styles/          # Global styles and theme
+└── types/           # TypeScript types
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🤝 Contributing
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-## Learn More
+## 🎯 Roadmap
 
-To learn more about Next.js, take a look at the following resources:
+- [ ] Real-time multiplayer for Snake
+- [ ] Parkour game implementation
+- [ ] Pac-Man game
+- [ ] Global leaderboards
+- [ ] Friend system
+- [ ] Custom game rooms with settings
+- [ ] Mobile app versions
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📜 License
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Deploy on Vercel
+## 🙏 Acknowledgments
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Built with [Next.js](https://nextjs.org/)
+- Database by [Supabase](https://supabase.com/)
+- Deployed on [Vercel](https://vercel.com/)
+- Font: Press Start 2P by CodeMan38
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+Made with ❤️ and lots of 🎮

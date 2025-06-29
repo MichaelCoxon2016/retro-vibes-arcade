@@ -66,7 +66,7 @@ Run the contents of `/supabase/game-rooms-schema-fixed.sql`
    - `http://localhost:3000/*`
    - `http://localhost:3001/*`
    - `http://localhost:3002/*`
-   - Your production URL when you deploy
+   - `https://retro-vibes-arcade.vercel.app/*`
 
 ## Step 7: Enable Realtime (Optional)
 
