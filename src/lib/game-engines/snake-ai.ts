@@ -1,15 +1,57 @@
 import { Direction, Position, SnakePlayer } from '@/types/snake'
 
+export type AIDifficulty = 'easy' | 'medium' | 'hard' | 'insane'
+
 export class SnakeAI {
   private targetFood: Position | null = null
+  private difficulty: AIDifficulty = 'medium'
+  private reactionDelay: number = 0
+  private lastMoveTime: number = 0
+
+  constructor(difficulty: AIDifficulty = 'medium') {
+    this.difficulty = difficulty
+    this.setReactionDelay()
+  }
+
+  private setReactionDelay() {
+    switch (this.difficulty) {
+      case 'easy':
+        this.reactionDelay = 300 // 300ms delay
+        break
+      case 'medium':
+        this.reactionDelay = 150 // 150ms delay
+        break
+      case 'hard':
+        this.reactionDelay = 50 // 50ms delay
+        break
+      case 'insane':
+        this.reactionDelay = 0 // No delay, perfect play
+        break
+    }
+  }
 
   public getNextDirection(
     player: SnakePlayer,
     food: Position[],
     boardWidth: number,
     boardHeight: number,
-    otherPlayers: SnakePlayer[]
+    otherPlayers: SnakePlayer[],
+    currentTime: number = Date.now()
   ): Direction {
+    // Apply reaction delay based on difficulty
+    if (currentTime - this.lastMoveTime < this.reactionDelay) {
+      return player.direction
+    }
+    this.lastMoveTime = currentTime
+
+    // Easy mode: Sometimes make mistakes
+    if (this.difficulty === 'easy' && Math.random() < 0.2) {
+      const randomDirections = this.getValidDirections(player, boardWidth, boardHeight, otherPlayers)
+      if (randomDirections.length > 0) {
+        return randomDirections[Math.floor(Math.random() * randomDirections.length)]
+      }
+    }
+
     const head = player.snake[0]
     
     // Find nearest food
@@ -20,11 +62,7 @@ export class SnakeAI {
     if (!this.targetFood) return player.direction
 
     // Calculate best direction to reach food
-    const possibleDirections: Direction[] = ['up', 'down', 'left', 'right']
-    const validDirections = possibleDirections.filter(dir => 
-      this.isValidDirection(player.direction, dir) && 
-      this.isSafeMove(head, dir, player, boardWidth, boardHeight, otherPlayers)
-    )
+    const validDirections = this.getValidDirections(player, boardWidth, boardHeight, otherPlayers)
 
     if (validDirections.length === 0) {
       // No safe moves, try to survive
@@ -73,6 +111,11 @@ export class SnakeAI {
 
   private findNearestFood(head: Position, food: Position[]): Position | null {
     if (food.length === 0) return null
+
+    // For insane difficulty, also consider future positions of other snakes
+    if (this.difficulty === 'insane') {
+      // Advanced prediction logic could go here
+    }
 
     let nearest = food[0]
     let minDistance = this.getDistance(head, nearest)

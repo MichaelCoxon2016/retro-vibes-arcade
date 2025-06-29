@@ -9,7 +9,7 @@ export interface GameRoom {
   game_type: string
   game_mode: string
   status: 'waiting' | 'ready' | 'playing' | 'finished' | 'cancelled'
-  settings: any
+  settings: Record<string, unknown>
   host_ready: boolean
   guest_ready: boolean
   created_at: string
@@ -21,7 +21,7 @@ export interface GameState {
   id: string
   room_id: string
   player_id: string
-  state: any
+  state: Record<string, unknown>
   sequence_number: number
   created_at: string
 }
@@ -30,7 +30,7 @@ export interface GameEvent {
   id: string
   room_id: string
   event_type: string
-  event_data: any
+  event_data: Record<string, unknown>
   created_by: string
   created_at: string
 }
@@ -46,12 +46,12 @@ export class GameRoomService {
   private supabase = createClient()
   private channel: RealtimeChannel | null = null
   private roomId: string | null = null
-  private onStateUpdate: ((state: any) => void) | null = null
+  private onStateUpdate: ((state: GameState) => void) | null = null
   private onEventReceived: ((event: GameEvent) => void) | null = null
   private onPresenceUpdate: ((presence: RealtimePresenceState<PlayerPresence>) => void) | null = null
   private onRoomUpdate: ((room: GameRoom) => void) | null = null
 
-  async createRoom(gameType: string = 'snake', settings: any = {}): Promise<{ roomId: string; roomCode: string }> {
+  async createRoom(gameType: string = 'snake', settings: Record<string, unknown> = {}): Promise<{ roomId: string; roomCode: string }> {
     const { data, error } = await this.supabase
       .rpc('create_game_room', {
         p_game_type: gameType,
@@ -105,7 +105,7 @@ export class GameRoomService {
   }
 
   async updateRoomStatus(roomId: string, status: GameRoom['status']): Promise<void> {
-    const updates: any = { status }
+    const updates: Partial<GameRoom> = { status } as Partial<GameRoom>
     
     if (status === 'playing') {
       updates.started_at = new Date().toISOString()
@@ -211,7 +211,7 @@ export class GameRoomService {
       })
   }
 
-  async sendGameState(state: any, sequenceNumber: number): Promise<void> {
+  async sendGameState(state: Record<string, unknown>, sequenceNumber: number): Promise<void> {
     if (!this.roomId) throw new Error('Not connected to a room')
 
     const user = await this.getCurrentUser()
@@ -229,7 +229,7 @@ export class GameRoomService {
     if (error) throw error
   }
 
-  async sendGameEvent(eventType: string, eventData: any): Promise<void> {
+  async sendGameEvent(eventType: string, eventData: Record<string, unknown>): Promise<void> {
     if (!this.roomId) throw new Error('Not connected to a room')
 
     const user = await this.getCurrentUser()
@@ -262,7 +262,7 @@ export class GameRoomService {
     })
   }
 
-  onStateUpdated(callback: (state: any) => void) {
+  onStateUpdated(callback: (state: GameState) => void) {
     this.onStateUpdate = callback
   }
 

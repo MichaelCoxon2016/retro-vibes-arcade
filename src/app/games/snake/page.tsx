@@ -680,25 +680,27 @@ export default function SnakePage() {
               </InfoPanel>
 
               {isGameOver && (
-                <Button 
-                  onClick={() => {
-                    // Reset the engine
-                    if (engineRef.current) {
-                      engineRef.current.resetGame()
-                    }
-                    // Restart the appropriate game mode
-                    if (gameMode === 'solo') {
-                      startSoloGame()
-                    } else if (gameMode === 'pvp') {
-                      startPvPGame()
-                    }
-                  }}
-                  variant="primary"
-                  fullWidth
-                  style={{ marginBottom: '1rem' }}
-                >
-                  Restart Game
-                </Button>
+                <>
+                  <Button 
+                    onClick={() => {
+                      // Reset the engine
+                      if (engineRef.current) {
+                        engineRef.current.resetGame()
+                      }
+                      // Restart the appropriate game mode
+                      if (gameMode === 'solo') {
+                        startSoloGame()
+                      } else if (gameMode === 'pvp') {
+                        startPvPGame()
+                      }
+                    }}
+                    variant="primary"
+                    fullWidth
+                  >
+                    Restart Game
+                  </Button>
+                  <div style={{ marginBottom: '1rem' }} />
+                </>
               )}
 
               <Button 
