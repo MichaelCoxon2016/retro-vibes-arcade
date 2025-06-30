@@ -251,9 +251,12 @@ export class SnakeGameEngine {
         ateFood = true
         this.spawnFood()
 
-        // Speed increases with score in solo mode
+        // Speed increases with score in solo mode (slower progression)
         if (this.state.mode === 'solo') {
-          player.speed = 1 + Math.floor(player.score / 50) * 0.1
+          // Speed increases every 100 points instead of 50, and by 0.05 instead of 0.1
+          player.speed = 1 + Math.floor(player.score / 100) * 0.05
+          // Cap max speed at 1.5x
+          player.speed = Math.min(player.speed, 1.5)
         }
       }
     })
@@ -338,20 +341,6 @@ export class SnakeGameEngine {
     })
   }
 
-  private getPowerUpData(type: PowerUpType) {
-    const data = {
-      speed: { name: 'Speed Boost', icon: '⚡', color: '#FFFF00', duration: 5, tournamentOnly: false },
-      slow_others: { name: 'Slow Motion', icon: '🐌', color: '#00FFFF', duration: 5, tournamentOnly: false },
-      ghost: { name: 'Ghost Mode', icon: '👻', color: '#9D00FF', duration: 5, tournamentOnly: false },
-      score: { name: 'Double Points', icon: '💎', color: '#FF00FF', duration: 10, tournamentOnly: false },
-      shield: { name: 'Shield', icon: '🛡️', color: '#00FF00', tournamentOnly: false },
-      growth: { name: 'Mega Growth', icon: '🔥', color: '#FF6600', tournamentOnly: true },
-      freeze_others: { name: 'Freeze', icon: '❄️', color: '#00D9FF', duration: 2, tournamentOnly: true },
-      teleport: { name: 'Teleport', icon: '🌀', color: '#FF10F0', tournamentOnly: true },
-      shrink_others: { name: 'Shrink Ray', icon: '🔫', color: '#FF0000', duration: 5, tournamentOnly: true }
-    }
-    return data[type]
-  }
 
   private collectPowerUp(player: SnakePlayer, powerUp: PowerUp) {
     switch (powerUp.type) {
@@ -791,5 +780,111 @@ export class SnakeGameEngine {
       right: 'left'
     }
     return opposites[current] !== next
+  }
+
+  // Multiplayer support methods
+  public initMultiplayerGame(players: { id: string; name: string; isLocal: boolean }[]) {
+    const positions = this.getStartPositions(players.length)
+    
+    players.forEach((p, index) => {
+      const player: SnakePlayer = {
+        id: p.id,
+        name: p.name,
+        snake: [
+          { x: positions[index].x, y: positions[index].y },
+          { x: positions[index].x - 1, y: positions[index].y },
+          { x: positions[index].x - 2, y: positions[index].y }
+        ],
+        direction: 'right',
+        score: 0,
+        speed: 1,
+        color: PLAYER_COLORS[index],
+        alive: true,
+        activePowerUps: []
+      }
+      this.state.players.set(p.id, player)
+    })
+
+    // Spawn food items
+    for (let i = 0; i < 5; i++) {
+      this.spawnFood()
+    }
+    
+    this.state.timeRemaining = 120 // 2 minute matches
+    this.state.status = 'playing'
+  }
+
+  public addPlayer(id: string, name: string, color: string, snake: Position[]) {
+    const player: SnakePlayer = {
+      id,
+      name,
+      snake,
+      direction: 'right',
+      nextDirection: undefined,
+      score: 0,
+      speed: 1,
+      color,
+      alive: true,
+      activePowerUps: []
+    }
+    this.state.players.set(id, player)
+  }
+
+  public removePlayer(id: string) {
+    this.state.players.delete(id)
+  }
+
+  public updatePlayerPosition(id: string, snake: Position[], direction: Direction) {
+    const player = this.state.players.get(id)
+    if (player) {
+      player.snake = snake
+      player.direction = direction
+    }
+  }
+
+  public getFoodById(id: string) {
+    return this.state.food.find(f => f.id === id)
+  }
+
+  public removeFoodById(id: string) {
+    const index = this.state.food.findIndex(f => f.id === id)
+    if (index !== -1) {
+      this.state.food.splice(index, 1)
+    }
+  }
+
+  public getPowerUpById(id: string) {
+    return this.state.powerUps.find(p => p.id === id)
+  }
+
+  public removePowerUpById(id: string) {
+    const index = this.state.powerUps.findIndex(p => p.id === id)
+    if (index !== -1) {
+      this.state.powerUps.splice(index, 1)
+    }
+  }
+
+  public setFood(food: typeof this.state.food) {
+    this.state.food = food
+  }
+
+  public setPowerUps(powerUps: typeof this.state.powerUps) {
+    this.state.powerUps = powerUps
+  }
+
+  // Make getPowerUpData public for multiplayer sync
+  public getPowerUpData(type: PowerUpType) {
+    const data = {
+      speed: { name: 'Speed Boost', icon: '⚡', color: '#FFFF00', duration: 5, tournamentOnly: false },
+      slow_others: { name: 'Slow Motion', icon: '🐌', color: '#00FFFF', duration: 5, tournamentOnly: false },
+      ghost: { name: 'Ghost Mode', icon: '👻', color: '#9D00FF', duration: 5, tournamentOnly: false },
+      score: { name: 'Double Points', icon: '💎', color: '#FF00FF', duration: 10, tournamentOnly: false },
+      shield: { name: 'Shield', icon: '🛡️', color: '#00FF00', tournamentOnly: false },
+      growth: { name: 'Mega Growth', icon: '🔥', color: '#FF6600', tournamentOnly: true },
+      freeze_others: { name: 'Freeze', icon: '❄️', color: '#00D9FF', duration: 2, tournamentOnly: true },
+      teleport: { name: 'Teleport', icon: '🌀', color: '#FF10F0', tournamentOnly: true },
+      shrink_others: { name: 'Shrink Ray', icon: '🔫', color: '#FF0000', duration: 5, tournamentOnly: true }
+    }
+    return data[type]
   }
 }

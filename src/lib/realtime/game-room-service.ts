@@ -200,12 +200,14 @@ export class GameRoomService {
           // Track user presence
           const user = await this.getCurrentUser()
           if (user) {
-            await this.channel.track({
+            const presenceData: PlayerPresence = {
               id: user.id,
               name: user.user_metadata?.username || 'Player',
               online_at: new Date().toISOString(),
               is_ready: false
-            })
+            }
+            console.log('Tracking presence:', presenceData)
+            await this.channel.track(presenceData)
           }
         }
       })

@@ -12,6 +12,7 @@ import toast from 'react-hot-toast'
 import Link from 'next/link'
 import PvPMenu, { AIDifficulty } from '@/components/game/PvPMenu'
 import { GameRoomService } from '@/lib/realtime/game-room-service'
+import { MultiplayerSnakeSync } from '@/lib/game-engines/multiplayer-snake-sync'
 
 const Container = styled.div`
   min-height: 100vh;
@@ -215,6 +216,7 @@ export default function SnakePage() {
   const engineRef = useRef<SnakeGameEngine | null>(null)
   const animationFrameRef = useRef<number>(0)
   const lastTimeRef = useRef<number>(0)
+  const multiplayerSyncRef = useRef<MultiplayerSnakeSync | null>(null)
   
   const { user } = useAuth(false) // Don't require auth for snake game
   const { updateHighScore } = useGameStore()
@@ -228,8 +230,9 @@ export default function SnakePage() {
   const [isGameOver, setIsGameOver] = useState(false)
   const [roomService] = useState(() => new GameRoomService())
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [_currentRoomId, setCurrentRoomId] = useState<string | null>(null) // Will be used for real-time sync
+  const [currentRoomId, setCurrentRoomId] = useState<string | null>(null) // Used for multiplayer room tracking
   const [waitingForPlayer, setWaitingForPlayer] = useState(false)
+  const [isMultiplayer, setIsMultiplayer] = useState(false)
 
   // Initialize engine when canvas is available
   const initializeEngine = useCallback(() => {
@@ -284,6 +287,11 @@ export default function SnakePage() {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current)
       }
+      // Clean up multiplayer sync
+      if (multiplayerSyncRef.current) {
+        multiplayerSyncRef.current.cleanup()
+        multiplayerSyncRef.current = null
+      }
       // Clean up room service listeners
       roomService.leaveRoom()
     }
@@ -310,6 +318,11 @@ export default function SnakePage() {
       if (direction) {
         e.preventDefault()
         engineRef.current.changeDirection(playerId, direction)
+        
+        // Send direction change in multiplayer
+        if (isMultiplayer && multiplayerSyncRef.current) {
+          multiplayerSyncRef.current.sendDirectionChange(direction)
+        }
       }
 
       // Pause/Resume
@@ -326,7 +339,7 @@ export default function SnakePage() {
 
     window.addEventListener('keydown', handleKeyPress)
     return () => window.removeEventListener('keydown', handleKeyPress)
-  }, [user])
+  }, [user, isMultiplayer])
 
   // Define handleGameOver before gameLoop
   const handleGameOver = useCallback(() => {
@@ -352,7 +365,7 @@ export default function SnakePage() {
   }, [gameMode, score, updateHighScore])
 
   // Game loop
-  const gameLoop = useCallback((timestamp: number) => {
+  const gameLoop = useCallback(async (timestamp: number) => {
     if (!engineRef.current) return
 
     const deltaTime = timestamp - lastTimeRef.current
@@ -383,6 +396,10 @@ export default function SnakePage() {
       setTimeRemaining(Math.ceil(state.timeRemaining))
     }
     
+    // Sync multiplayer state
+    if (isMultiplayer && multiplayerSyncRef.current) {
+      await multiplayerSyncRef.current.syncState(timestamp)
+    }
 
     // Check game over
     if (state.status === 'gameOver') {
@@ -392,7 +409,7 @@ export default function SnakePage() {
 
     // Continue loop
     animationFrameRef.current = requestAnimationFrame(gameLoop)
-  }, [user, handleGameOver])
+  }, [user, handleGameOver, isMultiplayer])
 
   const startSoloGame = async () => {
     console.log('Starting solo game...')
@@ -584,6 +601,7 @@ export default function SnakePage() {
     setGameMode('pvp')
     setScore(0)
     setTimeRemaining(120) // 2 minute matches
+    setIsMultiplayer(true)
     
     // Wait for canvas to be ready
     await new Promise(resolve => requestAnimationFrame(resolve))
@@ -610,31 +628,51 @@ export default function SnakePage() {
     const playerName = user?.user_metadata?.username || 'Player'
     
     try {
-      // For now, we'll use the same PvP logic but with placeholder for real multiplayer
-      // Initialize game for both players
-      if (isHost) {
-        // Host is player 1
-        engineRef.current.initPvPGame([
-          { id: playerId, name: `${playerName} (P1)` },
-          { id: 'guest', name: 'Player 2' }
-        ])
-        toast.success('Game started!')
-      } else {
-        // Guest is player 2
-        engineRef.current.initPvPGame([
-          { id: 'host', name: 'Player 1' },
-          { id: playerId, name: `${playerName} (P2)` }
-        ])
-        toast.success('Game started!')
+      // Get room details to see who's in the room
+      const room = await roomService.getRoom(roomId)
+      if (!room) {
+        throw new Error('Room not found')
+      }
+
+      // Initialize players based on who's in the room
+      const players = []
+      
+      if (room.host_id) {
+        const hostName = isHost ? playerName : 'Player 1'
+        players.push({
+          id: room.host_id,
+          name: hostName,
+          isLocal: isHost
+        })
       }
       
+      if (room.guest_id) {
+        const guestName = !isHost ? playerName : 'Player 2'
+        players.push({
+          id: room.guest_id,
+          name: guestName,
+          isLocal: !isHost
+        })
+      }
+
+      // Initialize the game with both players
+      engineRef.current.initMultiplayerGame(players)
+      
+      // Create multiplayer sync instance
+      multiplayerSyncRef.current = new MultiplayerSnakeSync(
+        engineRef.current,
+        roomService,
+        roomId,
+        playerId,
+        isHost
+      )
+      
+      // Start the game loop
       lastTimeRef.current = performance.now()
       animationFrameRef.current = requestAnimationFrame(gameLoop)
       setIsGameOver(false)
       
-      // TODO: Set up real-time listeners for game state synchronization
-      // roomService.onStateUpdated((state) => { ... })
-      // roomService.onEventOccurred((event) => { ... })
+      toast.success('Game started!')
       
     } catch (error) {
       console.error('Failed to start multiplayer game:', error)
@@ -696,6 +734,11 @@ export default function SnakePage() {
     if (!engineRef.current) return
     const playerId = user?.id || 'guest'
     engineRef.current.changeDirection(playerId, direction)
+    
+    // Send direction change in multiplayer
+    if (isMultiplayer && multiplayerSyncRef.current) {
+      multiplayerSyncRef.current.sendDirectionChange(direction)
+    }
   }
 
   return (
@@ -839,6 +882,10 @@ export default function SnakePage() {
                   if (animationFrameRef.current) {
                     cancelAnimationFrame(animationFrameRef.current)
                   }
+                  if (multiplayerSyncRef.current) {
+                    multiplayerSyncRef.current.cleanup()
+                    multiplayerSyncRef.current = null
+                  }
                   if (engineRef.current) {
                     // Reset the game state
                     engineRef.current = null
@@ -849,6 +896,7 @@ export default function SnakePage() {
                   setPlayerScores(new Map())
                   setTimeRemaining(null)
                   setIsGameOver(false)
+                  setIsMultiplayer(false)
                 }}
                 variant="danger"
                 fullWidth
