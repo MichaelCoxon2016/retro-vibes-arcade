@@ -27,7 +27,8 @@ export function useAuth(requireAuth: boolean = true) {
     checkUser()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      async (_event: any, session: any) => {
         setUser(session?.user ?? null)
         
         if (requireAuth && !session?.user) {

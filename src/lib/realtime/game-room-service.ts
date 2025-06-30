@@ -76,7 +76,11 @@ export class GameRoomService {
     
     // Check if user is authenticated
     const { data: { user } } = await this.supabase.auth.getUser()
-    console.log('Current user:', user?.id)
+    console.log('Current user:', user?.id, user?.email)
+    
+    // Also check the session
+    const { data: { session } } = await this.supabase.auth.getSession()
+    console.log('Current session:', session?.user?.id, 'Token exists:', !!session?.access_token)
     
     const { data, error } = await this.supabase
       .rpc('join_game_room', {
@@ -167,7 +171,7 @@ export class GameRoomService {
     this.channel = this.supabase.channel(`game_room:${roomId}`)
 
     // Subscribe to room updates
-    this.channel
+    this.channel!
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
