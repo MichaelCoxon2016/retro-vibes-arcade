@@ -666,9 +666,18 @@ export default function SnakePage() {
           isLocal: !isHost
         })
       }
+      
+      // Make sure we have 2 players
+      if (players.length !== 2) {
+        console.error('Not enough players in room:', players)
+        toast.error('Both players must be in the room')
+        return
+      }
 
       // Initialize the game with BOTH players
       console.log('Initializing multiplayer game with players:', players)
+      console.log('Current user ID:', playerId)
+      console.log('Is host?', isHost)
       engineRef.current.initMultiplayerGame(players)
       
       // Create multiplayer sync instance

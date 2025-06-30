@@ -106,10 +106,14 @@ export class MultiplayerSnakeSync {
   private applyRemoteState(state: GameState) {
     const syncedState = state.state as unknown as SyncedGameState
     const engineState = this.engine.getState()
+    
+    console.log('Applying remote state from player:', state.player_id)
+    console.log('Synced players:', syncedState.players)
 
     // Update remote player positions and states
     syncedState.players.forEach(remotePlayer => {
       if (remotePlayer.id !== this.playerId) {
+        console.log('Updating remote player:', remotePlayer.id, remotePlayer.name)
         const localPlayer = engineState.players.get(remotePlayer.id)
         if (localPlayer) {
           // Update position with interpolation
@@ -118,6 +122,7 @@ export class MultiplayerSnakeSync {
           localPlayer.score = remotePlayer.score
           localPlayer.alive = remotePlayer.alive
         } else {
+          console.log('Adding new remote player:', remotePlayer.id)
           // Add new player if they don't exist
           engineState.players.set(remotePlayer.id, {
             id: remotePlayer.id,

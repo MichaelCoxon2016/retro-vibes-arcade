@@ -784,6 +784,8 @@ export class SnakeGameEngine {
 
   // Multiplayer support methods
   public initMultiplayerGame(players: { id: string; name: string; isLocal: boolean }[]) {
+    console.log('SnakeEngine: Initializing multiplayer game with players:', players)
+    
     const positions = this.getStartPositions(players.length)
     
     players.forEach((p, index) => {
@@ -803,7 +805,10 @@ export class SnakeGameEngine {
         activePowerUps: []
       }
       this.state.players.set(p.id, player)
+      console.log(`SnakeEngine: Added player ${p.name} (${p.id}) at position ${index} with color ${PLAYER_COLORS[index]}`)
     })
+    
+    console.log('SnakeEngine: Total players in game:', this.state.players.size)
 
     // Spawn food items
     for (let i = 0; i < 5; i++) {
