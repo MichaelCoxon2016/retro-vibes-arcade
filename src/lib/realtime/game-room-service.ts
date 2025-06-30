@@ -72,17 +72,31 @@ export class GameRoomService {
   }
 
   async joinRoom(roomCode: string): Promise<string> {
+    console.log('Attempting to join room with code:', roomCode)
+    
+    // Check if user is authenticated
+    const { data: { user } } = await this.supabase.auth.getUser()
+    console.log('Current user:', user?.id)
+    
     const { data, error } = await this.supabase
       .rpc('join_game_room', {
-        p_room_code: roomCode
+        p_room_code: roomCode.toUpperCase() // Ensure uppercase
       })
 
-    if (error) throw error
-    if (!data || data.length === 0) throw new Error('Failed to join room')
+    console.log('Join room response:', { data, error })
+
+    if (error) {
+      console.error('Join room error:', error)
+      throw error
+    }
+    
+    if (!data || data.length === 0) throw new Error('Failed to join room - no data returned')
 
     const result = data[0]
+    console.log('Join room result:', result)
+    
     if (!result.success) {
-      throw new Error(result.message)
+      throw new Error(result.message || 'Failed to join room')
     }
 
     await this.joinRoomChannel(result.room_id)

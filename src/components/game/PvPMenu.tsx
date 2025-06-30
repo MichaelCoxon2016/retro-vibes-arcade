@@ -166,7 +166,8 @@ export default function PvPMenu({ onStartAI, onCreateRoom, onJoinRoom, onStartMu
         toast.error('Failed to join room')
       }
     } catch (error) {
-      toast.error('Failed to join room')
+      const errorMessage = error instanceof Error ? error.message : 'Failed to join room'
+      toast.error(errorMessage)
       console.error('Join room error:', error)
     } finally {
       setIsLoading(false)

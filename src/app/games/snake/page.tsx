@@ -511,6 +511,12 @@ export default function SnakePage() {
 
   const handleCreateRoom = async () => {
     try {
+      // Ensure user is authenticated
+      if (!user) {
+        toast.error('Please sign in to create multiplayer games')
+        throw new Error('Authentication required')
+      }
+      
       const result = await roomService.createRoom('snake', {})
       console.log('Room created:', result)
       setCurrentRoomId(result.roomId)
@@ -535,6 +541,12 @@ export default function SnakePage() {
 
   const handleJoinRoom = async (roomCode: string) => {
     try {
+      // Ensure user is authenticated (even as guest)
+      if (!user) {
+        toast.error('Please sign in to join multiplayer games')
+        return { success: false }
+      }
+      
       const roomId = await roomService.joinRoom(roomCode)
       console.log('Joined room:', roomId)
       setCurrentRoomId(roomId)
@@ -542,9 +554,10 @@ export default function SnakePage() {
       // Set up listeners for when host starts the game
       roomService.onRoomUpdated((room) => {
         console.log('Guest received room update:', room)
-        if (room.status === 'playing' && showPvPMenu) {
+        if (room.status === 'playing' && (showPvPMenu || waitingForPlayer)) {
           // Host has started the game, guest should start too
           console.log('Host started game, guest joining...')
+          setWaitingForPlayer(false)
           handleStartMultiplayer(room.id, room.room_code, false)
         }
       })
@@ -637,25 +650,25 @@ export default function SnakePage() {
       // Initialize players based on who's in the room
       const players = []
       
+      // ALWAYS add both players to the game, regardless of who we are
       if (room.host_id) {
-        const hostName = isHost ? playerName : 'Player 1'
         players.push({
           id: room.host_id,
-          name: hostName,
+          name: isHost ? `${playerName} (P1)` : 'Player 1',
           isLocal: isHost
         })
       }
       
       if (room.guest_id) {
-        const guestName = !isHost ? playerName : 'Player 2'
         players.push({
           id: room.guest_id,
-          name: guestName,
+          name: !isHost ? `${playerName} (P2)` : 'Player 2',
           isLocal: !isHost
         })
       }
 
-      // Initialize the game with both players
+      // Initialize the game with BOTH players
+      console.log('Initializing multiplayer game with players:', players)
       engineRef.current.initMultiplayerGame(players)
       
       // Create multiplayer sync instance
@@ -668,9 +681,18 @@ export default function SnakePage() {
       )
       
       // Start the game loop
-      lastTimeRef.current = performance.now()
-      animationFrameRef.current = requestAnimationFrame(gameLoop)
-      setIsGameOver(false)
+      // For guest, add a small delay to receive initial state from host
+      if (!isHost) {
+        setTimeout(() => {
+          lastTimeRef.current = performance.now()
+          animationFrameRef.current = requestAnimationFrame(gameLoop)
+          setIsGameOver(false)
+        }, 200)
+      } else {
+        lastTimeRef.current = performance.now()
+        animationFrameRef.current = requestAnimationFrame(gameLoop)
+        setIsGameOver(false)
+      }
       
       toast.success('Game started!')
       

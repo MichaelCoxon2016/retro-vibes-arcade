@@ -52,6 +52,13 @@ export class MultiplayerSnakeSync {
     this.isHost = isHost
 
     this.setupListeners()
+    
+    // If we're the host, immediately send the initial game state
+    if (this.isHost) {
+      setTimeout(() => {
+        this.syncState(performance.now())
+      }, 100)
+    }
   }
 
   private setupListeners() {
