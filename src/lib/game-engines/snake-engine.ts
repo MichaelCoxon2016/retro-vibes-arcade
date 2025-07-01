@@ -22,17 +22,17 @@ export class SnakeGameEngine {
   private aiPlayers: Map<string, SnakeAI> = new Map()
   private aiMoveCounter: number = 0
   private backgroundMusic: HTMLAudioElement | null = null
-  private currentMode: SnakeGameState['mode'] | null = null
-  private gameStore: any
+  private currentMode: SnakeGameState['mode'] | 'ai' | null = null
+  private musicEnabled: boolean = true
 
-  constructor(canvas: HTMLCanvasElement, mode: SnakeGameState['mode'] = 'solo', gameStore?: any) {
+  constructor(canvas: HTMLCanvasElement, mode: SnakeGameState['mode'] = 'solo', musicEnabled: boolean = true) {
     this.canvas = canvas
     const ctx = canvas.getContext('2d')
     if (!ctx) {
       throw new Error('Failed to get 2D context from canvas')
     }
     this.ctx = ctx
-    this.gameStore = gameStore
+    this.musicEnabled = musicEnabled
     
     const boardSize = mode === 'tournament' ? 'massive' : 'medium'
     const board = BOARD_SIZES[boardSize]
@@ -97,14 +97,10 @@ export class SnakeGameEngine {
   }
 
   private playMusic() {
-    if (this.backgroundMusic) {
-      // Check if music is enabled in game settings
-      const musicEnabled = this.gameStore?.getState?.().settings?.musicEnabled ?? true
-      if (musicEnabled) {
-        this.backgroundMusic.play().catch(err => {
-          console.log('Failed to play background music:', err)
-        })
-      }
+    if (this.backgroundMusic && this.musicEnabled) {
+      this.backgroundMusic.play().catch(err => {
+        console.log('Failed to play background music:', err)
+      })
     }
   }
 
@@ -127,9 +123,9 @@ export class SnakeGameEngine {
     }
   }
 
-  public updateMusicSettings() {
-    if (this.backgroundMusic && this.gameStore) {
-      const musicEnabled = this.gameStore.getState().settings.musicEnabled
+  public updateMusicSettings(musicEnabled: boolean) {
+    this.musicEnabled = musicEnabled
+    if (this.backgroundMusic) {
       if (musicEnabled && this.state.status === 'playing') {
         this.playMusic()
       } else if (!musicEnabled) {

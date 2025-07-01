@@ -219,8 +219,7 @@ export default function SnakePage() {
   const multiplayerSyncRef = useRef<MultiplayerSnakeSync | null>(null)
   
   const { user } = useAuth(false) // Don't require auth for snake game
-  const gameStore = useGameStore()
-  const { updateHighScore } = gameStore
+  const { updateHighScore, settings } = useGameStore()
   
   const [gameMode, setGameMode] = useState<SnakeGameMode | null>(null)
   const [showMenu, setShowMenu] = useState(true)
@@ -257,7 +256,7 @@ export default function SnakePage() {
       })
       
       console.log('Creating new SnakeGameEngine...')
-      const engine = new SnakeGameEngine(canvasRef.current, 'solo', gameStore)
+      const engine = new SnakeGameEngine(canvasRef.current, 'solo', settings.musicEnabled)
       engineRef.current = engine
       
       console.log('Engine created, rendering...')
@@ -270,7 +269,7 @@ export default function SnakePage() {
       console.error('Error stack:', error instanceof Error ? error.stack : 'No stack')
       return false
     }
-  }, [gameStore])
+  }, [settings.musicEnabled])
 
   // Try to initialize engine when showMenu changes
   useEffect(() => {
@@ -281,6 +280,13 @@ export default function SnakePage() {
       })
     }
   }, [showMenu, initializeEngine])
+
+  // Update music settings when they change
+  useEffect(() => {
+    if (engineRef.current) {
+      engineRef.current.updateMusicSettings(settings.musicEnabled)
+    }
+  }, [settings.musicEnabled])
 
   // Cleanup on unmount
   useEffect(() => {
