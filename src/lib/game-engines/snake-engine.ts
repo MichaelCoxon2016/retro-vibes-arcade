@@ -21,14 +21,18 @@ export class SnakeGameEngine {
   private powerUpIdCounter: number = 0
   private aiPlayers: Map<string, SnakeAI> = new Map()
   private aiMoveCounter: number = 0
+  private backgroundMusic: HTMLAudioElement | null = null
+  private currentMode: SnakeGameState['mode'] | null = null
+  private gameStore: any
 
-  constructor(canvas: HTMLCanvasElement, mode: SnakeGameState['mode'] = 'solo') {
+  constructor(canvas: HTMLCanvasElement, mode: SnakeGameState['mode'] = 'solo', gameStore?: any) {
     this.canvas = canvas
     const ctx = canvas.getContext('2d')
     if (!ctx) {
       throw new Error('Failed to get 2D context from canvas')
     }
     this.ctx = ctx
+    this.gameStore = gameStore
     
     const boardSize = mode === 'tournament' ? 'massive' : 'medium'
     const board = BOARD_SIZES[boardSize]
@@ -43,6 +47,7 @@ export class SnakeGameEngine {
     }
 
     this.setupCanvas()
+    this.setupAudio(mode)
     // Do an initial render to show the canvas is working
     this.render()
   }
@@ -65,6 +70,72 @@ export class SnakeGameEngine {
       cellSize,
       context: this.ctx ? 'valid' : 'invalid'
     })
+  }
+
+  private setupAudio(mode: SnakeGameState['mode']) {
+    this.currentMode = mode
+    this.stopMusic()
+    
+    // Create new audio element
+    this.backgroundMusic = new Audio()
+    this.backgroundMusic.loop = true
+    this.backgroundMusic.volume = 0.5 // Set default volume to 50%
+    
+    // Set the source based on game mode
+    switch (mode) {
+      case 'solo':
+        this.backgroundMusic.src = '/music/solo-classic.mp3'
+        break
+      case 'pvp':
+      case 'tournament':
+        this.backgroundMusic.src = '/music/pvp-player.mp3'
+        break
+      default:
+        // For multiplayer modes, we'll use pvp soundtrack
+        this.backgroundMusic.src = '/music/pvp-player.mp3'
+    }
+  }
+
+  private playMusic() {
+    if (this.backgroundMusic) {
+      // Check if music is enabled in game settings
+      const musicEnabled = this.gameStore?.getState?.().settings?.musicEnabled ?? true
+      if (musicEnabled) {
+        this.backgroundMusic.play().catch(err => {
+          console.log('Failed to play background music:', err)
+        })
+      }
+    }
+  }
+
+  private stopMusic() {
+    if (this.backgroundMusic) {
+      this.backgroundMusic.pause()
+      this.backgroundMusic.currentTime = 0
+    }
+  }
+
+  private updateMusicForAI() {
+    // If there's an AI player and we're not already playing the AI music
+    if (this.backgroundMusic && this.currentMode !== 'ai') {
+      const hasAI = Array.from(this.state.players.values()).some(p => p.id.startsWith('bot-'))
+      if (hasAI) {
+        this.currentMode = 'ai'
+        this.backgroundMusic.src = '/music/pvAI.mp3'
+        this.playMusic()
+      }
+    }
+  }
+
+  public updateMusicSettings() {
+    if (this.backgroundMusic && this.gameStore) {
+      const musicEnabled = this.gameStore.getState().settings.musicEnabled
+      if (musicEnabled && this.state.status === 'playing') {
+        this.playMusic()
+      } else if (!musicEnabled) {
+        this.stopMusic()
+      }
+    }
   }
 
   public initSoloGame(playerId: string, playerName: string) {
@@ -104,6 +175,9 @@ export class SnakeGameEngine {
     
     this.state.status = 'playing'
     
+    // Start playing music
+    this.playMusic()
+    
     // Do an initial render
     this.render()
   }
@@ -142,6 +216,12 @@ export class SnakeGameEngine {
     
     this.state.timeRemaining = 120 // 2 minutes
     this.state.status = 'playing' // Start immediately
+    
+    // Update music if playing against AI
+    this.updateMusicForAI()
+    
+    // Start playing music
+    this.playMusic()
   }
 
   public update(deltaTime: number) {
@@ -525,6 +605,9 @@ export class SnakeGameEngine {
   private endGame() {
     this.state.status = 'gameOver'
     
+    // Stop music when game ends
+    this.stopMusic()
+    
     // Determine winner
     const players = Array.from(this.state.players.values())
     const winner = players.reduce((prev, current) => 
@@ -544,16 +627,21 @@ export class SnakeGameEngine {
   public pauseGame() {
     if (this.state.status === 'playing') {
       this.state.status = 'paused'
+      this.stopMusic()
     }
   }
 
   public resumeGame() {
     if (this.state.status === 'paused') {
       this.state.status = 'playing'
+      this.playMusic()
     }
   }
 
   public resetGame() {
+    // Stop music
+    this.stopMusic()
+    
     // Clear all game state
     this.state.players.clear()
     this.state.food = []

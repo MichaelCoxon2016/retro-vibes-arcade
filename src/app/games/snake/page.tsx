@@ -219,7 +219,8 @@ export default function SnakePage() {
   const multiplayerSyncRef = useRef<MultiplayerSnakeSync | null>(null)
   
   const { user } = useAuth(false) // Don't require auth for snake game
-  const { updateHighScore } = useGameStore()
+  const gameStore = useGameStore()
+  const { updateHighScore } = gameStore
   
   const [gameMode, setGameMode] = useState<SnakeGameMode | null>(null)
   const [showMenu, setShowMenu] = useState(true)
@@ -256,7 +257,7 @@ export default function SnakePage() {
       })
       
       console.log('Creating new SnakeGameEngine...')
-      const engine = new SnakeGameEngine(canvasRef.current)
+      const engine = new SnakeGameEngine(canvasRef.current, 'solo', gameStore)
       engineRef.current = engine
       
       console.log('Engine created, rendering...')
@@ -269,7 +270,7 @@ export default function SnakePage() {
       console.error('Error stack:', error instanceof Error ? error.stack : 'No stack')
       return false
     }
-  }, [])
+  }, [gameStore])
 
   // Try to initialize engine when showMenu changes
   useEffect(() => {
